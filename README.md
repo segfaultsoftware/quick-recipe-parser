@@ -1,0 +1,69 @@
+# Quick Recipe Parser
+
+A tool to parse, normalize, and manage recipes from spreadsheets and websites. Built with modern Rails.
+
+## Tech Stack
+
+- **Ruby** 3.4.8
+- **Rails** 8.1 with Hotwire (Turbo + Stimulus), Importmaps, Propshaft
+- **PostgreSQL** for the database
+- **Tailwind CSS** via `tailwindcss-rails`
+- **Docker** for containerized development and deployment
+
+No secondary JavaScript frameworks — all UI is built with native Rails tech.
+
+## Getting Started
+
+### Prerequisites
+
+- Ruby 3.4.8 (recommended: install via [rbenv](https://github.com/rbenv/rbenv))
+- PostgreSQL 14+
+- Or just Docker and Docker Compose
+
+### Local Setup (without Docker)
+
+```bash
+# Install Ruby dependencies
+bundle install
+
+# Create and migrate the database
+bin/rails db:prepare
+
+# Start the development server
+bin/dev
+```
+
+The app will be available at [http://localhost:3000](http://localhost:3000).
+
+### Docker Setup
+
+```bash
+# Build and start all services
+docker compose up --build
+
+# In a separate terminal, create the database (first time only)
+docker compose exec web bin/rails db:prepare
+```
+
+The app will be available at [http://localhost:3000](http://localhost:3000).
+
+### Running Tests
+
+```bash
+bin/rails test
+bin/rails test:system
+```
+
+### Linting
+
+```bash
+bin/rubocop
+```
+
+## CI
+
+GitHub Actions runs on every PR and push to `main`:
+
+- **Security scans**: Brakeman (static analysis) and bundler-audit (dependency vulnerabilities)
+- **Lint**: RuboCop with Rails Omakase style
+- **Tests**: Unit and system tests against PostgreSQL
