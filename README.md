@@ -60,6 +60,33 @@ bin/rails test:system
 bin/rubocop
 ```
 
+## Deployment
+
+The app is deployed on [Fly.io](https://fly.io) with [Neon](https://neon.tech) for PostgreSQL.
+
+**Live app**: [https://quick-recipe-parser.fly.dev](https://quick-recipe-parser.fly.dev)
+
+### Infrastructure
+
+| Service | Purpose | Plan |
+|---------|---------|------|
+| Fly.io | App hosting (Docker containers) | Free tier (shared CPU, 1GB RAM) |
+| Neon | PostgreSQL database | Free tier |
+
+### Manual Deploy
+
+```bash
+# Requires flyctl CLI and FLY_API_TOKEN
+flyctl deploy
+```
+
+### Fly.io Secrets
+
+The following secrets are configured on Fly.io (not in source control):
+
+- `RAILS_MASTER_KEY` — Rails encrypted credentials key
+- `DATABASE_URL` — Neon PostgreSQL connection string
+
 ## CI
 
 GitHub Actions runs on every PR and push to `main`:
