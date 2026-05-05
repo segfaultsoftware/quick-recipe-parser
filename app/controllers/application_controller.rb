@@ -16,4 +16,10 @@ private
   def logged_in?
     current_user.present?
   end
+
+  def require_login
+    unless logged_in?
+      redirect_to root_path, alert: "You must be signed in to access that page"
+    end
+  end
 end
