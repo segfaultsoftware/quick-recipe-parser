@@ -26,6 +26,9 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     follow_redirect!
+    # Logged-in user gets redirected from root to recipes
+    assert_redirected_to recipes_path
+    follow_redirect!
     assert_match "Test User", response.body
   end
 

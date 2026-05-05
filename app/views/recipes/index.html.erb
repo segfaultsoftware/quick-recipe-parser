@@ -1,0 +1,37 @@
+<div class="mx-auto md:w-2/3 w-full">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="font-bold text-4xl">My Recipes</h1>
+    <%= link_to "New Recipe", new_recipe_path,
+          class: "bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded hover:bg-blue-700" %>
+  </div>
+
+  <% if @recipes.any? %>
+    <table class="w-full bg-white shadow rounded-lg">
+      <thead>
+        <tr class="border-b">
+          <th class="text-left px-6 py-3 text-sm font-semibold text-gray-700">Name</th>
+          <th class="text-left px-6 py-3 text-sm font-semibold text-gray-700">Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @recipes.each do |recipe| %>
+          <tr class="border-b last:border-b-0 hover:bg-gray-50">
+            <td class="px-6 py-4">
+              <%= link_to recipe.name, recipe, class: "text-blue-600 hover:underline" %>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">
+              <% if recipe.reference_url.present? %>
+                <%= link_to "Reference", recipe.reference_url, target: "_blank", rel: "noopener noreferrer",
+                      class: "text-blue-600 hover:underline" %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <div class="bg-white shadow rounded-lg p-6">
+      <p class="text-gray-600">You haven't added any recipes yet. <%= link_to "Add your first recipe", new_recipe_path, class: "text-blue-600 hover:underline" %>.</p>
+    </div>
+  <% end %>
+</div>

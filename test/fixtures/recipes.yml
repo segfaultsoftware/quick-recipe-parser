@@ -1,0 +1,12 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: "Chicken Parmesan"
+  reference_url: "https://example.com/chicken-parm"
+
+two:
+  name: "Beef Stew"
+  reference_url: "https://example.com/beef-stew"
+
+no_url:
+  name: "Grandma's Cookies"

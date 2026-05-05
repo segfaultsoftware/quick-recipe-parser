@@ -16,6 +16,8 @@ Rails.application.routes.draw do
   # Session management
   delete "sign_out", to: "sessions#destroy", as: :sign_out
 
+  resources :recipes
+
   # Defines the root path route ("/")
   root "home#index"
 end
