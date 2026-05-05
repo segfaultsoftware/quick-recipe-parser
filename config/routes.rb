@@ -9,6 +9,13 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  # OmniAuth callback routes
+  get "auth/:provider/callback", to: "sessions#create"
+  get "auth/failure", to: "sessions#failure"
+
+  # Session management
+  delete "sign_out", to: "sessions#destroy", as: :sign_out
+
   # Defines the root path route ("/")
   root "home#index"
 end
