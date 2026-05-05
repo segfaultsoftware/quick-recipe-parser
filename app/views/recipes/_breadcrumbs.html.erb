@@ -1,0 +1,15 @@
+<nav aria-label="Breadcrumb" class="mb-4">
+  <ol class="flex items-center gap-1 text-sm text-gray-500">
+    <% crumbs.each_with_index do |(label, path), index| %>
+      <% if index > 0 %>
+        <li class="text-gray-400">/</li>
+      <% end %>
+
+      <% if path %>
+        <li><%= link_to label, path, class: "hover:text-gray-700 hover:underline" %></li>
+      <% else %>
+        <li class="text-gray-700 font-medium"><%= label %></li>
+      <% end %>
+    <% end %>
+  </ol>
+</nav>

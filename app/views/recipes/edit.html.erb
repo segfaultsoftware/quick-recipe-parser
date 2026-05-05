@@ -1,4 +1,6 @@
 <div class="mx-auto md:w-2/3 w-full">
+  <%= render "breadcrumbs", crumbs: [["My Recipes", recipes_path], [@recipe.name, recipe_path(@recipe)], ["Edit", nil]] %>
+
   <h1 class="font-bold text-4xl mb-6">Edit Recipe</h1>
 
   <div class="bg-white shadow rounded-lg p-6">
