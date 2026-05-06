@@ -1,9 +1,17 @@
 <div data-ingredient-row class="flex items-center gap-2">
-  <input type="text"
-         name="recipe[recipe_ingredients_attributes][<%= index %>][ingredient_name]"
-         value="<%= recipe_ingredient&.ingredient&.name %>"
-         placeholder="Ingredient name"
-         class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+  <div class="flex-1 relative" data-controller="autocomplete" data-autocomplete-url-value="/ingredients/search">
+    <input type="text"
+           name="recipe[recipe_ingredients_attributes][<%= index %>][ingredient_name]"
+           value="<%= recipe_ingredient&.ingredient&.name %>"
+           placeholder="Ingredient name"
+           data-autocomplete-target="input"
+           data-action="input->autocomplete#onInput keydown->autocomplete#onKeydown"
+           autocomplete="off"
+           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    <div data-autocomplete-target="dropdown"
+         class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto">
+    </div>
+  </div>
 
   <input type="number"
          name="recipe[recipe_ingredients_attributes][<%= index %>][number_of_units]"
