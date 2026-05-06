@@ -14,11 +14,20 @@
 
   <div class="bg-white shadow rounded-lg p-6">
     <% if @recipe.reference_url.present? %>
-      <p class="text-sm text-gray-600 mb-2">
+      <p class="text-sm text-gray-600 mb-4">
         <span class="font-semibold">Reference:</span>
         <%= link_to @recipe.reference_url, @recipe.reference_url, target: "_blank", rel: "noopener noreferrer",
               class: "text-blue-600 hover:underline break-all" %>
       </p>
+    <% end %>
+
+    <% if @recipe.recipe_ingredients.any? %>
+      <h2 class="text-lg font-semibold text-gray-700 mb-2">Ingredients</h2>
+      <ul class="list-disc list-inside space-y-1 text-gray-700">
+        <% @recipe.recipe_ingredients.includes(:ingredient).each do |ri| %>
+          <li><%= ri.display_text %></li>
+        <% end %>
+      </ul>
     <% end %>
   </div>
 </div>

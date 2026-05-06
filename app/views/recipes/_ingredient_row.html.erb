@@ -1,0 +1,29 @@
+<div data-ingredient-row class="flex items-center gap-2">
+  <input type="text"
+         name="recipe[recipe_ingredients_attributes][<%= index %>][ingredient_name]"
+         value="<%= recipe_ingredient&.ingredient&.name %>"
+         placeholder="Ingredient name"
+         class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+  <input type="number"
+         name="recipe[recipe_ingredients_attributes][<%= index %>][number_of_units]"
+         value="<%= recipe_ingredient&.number_of_units&.to_f %>"
+         placeholder="Qty"
+         step="any"
+         min="0"
+         class="w-20 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+  <select name="recipe[recipe_ingredients_attributes][<%= index %>][unit_of_measurement]"
+          class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <% RecipeIngredient::UNITS_OF_MEASUREMENT.each do |unit| %>
+      <option value="<%= unit %>" <%= "selected" if recipe_ingredient&.unit_of_measurement == unit %>>
+        <%= unit.humanize %>
+      </option>
+    <% end %>
+  </select>
+
+  <button type="button" data-action="ingredients#remove"
+          class="text-red-500 hover:text-red-700 text-sm font-medium px-2">
+    &times;
+  </button>
+</div>

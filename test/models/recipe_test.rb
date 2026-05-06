@@ -21,4 +21,17 @@ class RecipeTest < ActiveSupport::TestCase
     recipe = recipes(:one)
     assert_includes recipe.users, users(:one)
   end
+
+  test "has many ingredients through recipe_ingredients" do
+    recipe = recipes(:one)
+    assert_includes recipe.ingredients, ingredients(:salt)
+    assert_includes recipe.ingredients, ingredients(:chicken)
+  end
+
+  test "destroying recipe destroys recipe_ingredients" do
+    recipe = recipes(:one)
+    assert_difference "RecipeIngredient.count", -3 do
+      recipe.destroy
+    end
+  end
 end
