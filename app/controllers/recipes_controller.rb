@@ -1,6 +1,6 @@
 class RecipesController < ApplicationController
   before_action :require_login
-  before_action :set_recipe, only: %i[show edit update destroy]
+  before_action :set_recipe, only: %i[show edit update destroy parse]
 
   def index
     @recipes = current_user.recipes.order(:name)
@@ -44,6 +44,27 @@ class RecipesController < ApplicationController
     redirect_to recipes_path, notice: "Recipe was successfully deleted."
   end
 
+  def parse
+    url = @recipe.reference_url
+    if url.blank?
+      render json: { error: "No reference URL set for this recipe" }, status: :unprocessable_entity
+      return
+    end
+
+    parser = build_parser
+    parsed_ingredients = parser.parse(url)
+
+    save_parsed_ingredients(@recipe, parsed_ingredients)
+
+    ingredients_data = @recipe.recipe_ingredients.includes(:ingredient).map do |ri|
+      { name: ri.ingredient.name, quantity: ri.number_of_units.to_f, unit: ri.unit_of_measurement }
+    end
+
+    render json: { ingredients: ingredients_data, count: ingredients_data.size }
+  rescue StandardError => e
+    render json: { error: "Failed to parse recipe: #{e.message}" }, status: :unprocessable_entity
+  end
+
 private
 
   def set_recipe
@@ -70,6 +91,25 @@ private
         ingredient: ingredient,
         unit_of_measurement: ri_attrs[:unit_of_measurement],
         number_of_units: ri_attrs[:number_of_units].presence || 0
+      )
+    end
+  end
+
+  def build_parser
+    RecipeParsers::SchemaOrg.new
+  end
+
+  def save_parsed_ingredients(recipe, parsed_ingredients)
+    recipe.recipe_ingredients.destroy_all
+
+    parsed_ingredients.each do |pi|
+      next if pi.name.blank?
+
+      ingredient = Ingredient.find_or_create_by_name(pi.name)
+      recipe.recipe_ingredients.create!(
+        ingredient: ingredient,
+        unit_of_measurement: pi.unit,
+        number_of_units: pi.quantity
       )
     end
   end

@@ -7,3 +7,7 @@ one:
 two:
   user: two
   recipe: two
+
+three:
+  user: one
+  recipe: no_url

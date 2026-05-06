@@ -196,4 +196,110 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     delete recipe_url(recipes(:two))
     assert_response :not_found
   end
+
+  # Parse tests
+
+  test "parse requires authentication" do
+    delete sign_out_path
+    post parse_recipe_url(@recipe)
+    assert_redirected_to root_path
+  end
+
+  test "parse returns error when recipe has no reference_url" do
+    recipe_no_url = recipes(:no_url)
+    current_user.recipes << recipe_no_url unless current_user.recipes.include?(recipe_no_url)
+
+    post parse_recipe_url(recipe_no_url), as: :json
+    assert_response :unprocessable_entity
+
+    data = JSON.parse(response.body)
+    assert_match(/No reference URL/, data["error"])
+  end
+
+  test "parse saves ingredients from parsed URL" do
+    parsed = [
+      RecipeParsers::Base::ParsedIngredient.new(name: "flour", quantity: 2.0, unit: "cup"),
+      RecipeParsers::Base::ParsedIngredient.new(name: "baking soda", quantity: 1.0, unit: "teaspoon")
+    ]
+
+    RecipesController.define_method(:build_parser) { FakeParser.new(parsed) }
+
+    post parse_recipe_url(@recipe), as: :json
+    assert_response :success
+
+    data = JSON.parse(response.body)
+    assert_equal 2, data["count"]
+    assert data["ingredients"].any? { |i| i["name"] == "flour" }
+  ensure
+    RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
+  end
+
+  test "parse replaces existing ingredients" do
+    assert @recipe.recipe_ingredients.count > 0
+
+    parsed = [
+      RecipeParsers::Base::ParsedIngredient.new(name: "sugar", quantity: 3.0, unit: "cup")
+    ]
+
+    RecipesController.define_method(:build_parser) { FakeParser.new(parsed) }
+
+    post parse_recipe_url(@recipe), as: :json
+    assert_response :success
+
+    @recipe.reload
+    assert_equal 1, @recipe.recipe_ingredients.count
+    assert_equal "sugar", @recipe.recipe_ingredients.first.ingredient.name
+  ensure
+    RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
+  end
+
+  test "parse handles errors gracefully" do
+    RecipesController.define_method(:build_parser) { ErrorParser.new("Connection refused") }
+
+    post parse_recipe_url(@recipe), as: :json
+    assert_response :unprocessable_entity
+
+    data = JSON.parse(response.body)
+    assert_match(/Failed to parse/, data["error"])
+  ensure
+    RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
+  end
+
+  test "parse returns empty when no ingredients found" do
+    RecipesController.define_method(:build_parser) { FakeParser.new([]) }
+
+    post parse_recipe_url(@recipe), as: :json
+    assert_response :success
+
+    data = JSON.parse(response.body)
+    assert_equal 0, data["count"]
+  ensure
+    RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
+  end
+
+private
+
+  def current_user
+    @user
+  end
+
+  class FakeParser
+    def initialize(result)
+      @result = result
+    end
+
+    def parse(_url)
+      @result
+    end
+  end
+
+  class ErrorParser
+    def initialize(message)
+      @message = message
+    end
+
+    def parse(_url)
+      raise StandardError, @message
+    end
+  end
 end
