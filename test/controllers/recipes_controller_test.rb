@@ -205,7 +205,7 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "parse returns error when recipe has no reference_url" do
+  test "parse returns error when no url provided and recipe has no reference_url" do
     recipe_no_url = recipes(:no_url)
     current_user.recipes << recipe_no_url unless current_user.recipes.include?(recipe_no_url)
 
@@ -214,6 +214,25 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
 
     data = JSON.parse(response.body)
     assert_match(/No reference URL/, data["error"])
+  end
+
+  test "parse uses url from params and saves it to the recipe" do
+    recipe_no_url = recipes(:no_url)
+    current_user.recipes << recipe_no_url unless current_user.recipes.include?(recipe_no_url)
+
+    parsed = [
+      RecipeParsers::Base::ParsedIngredient.new(name: "sugar", quantity: 1.0, unit: "cup")
+    ]
+
+    RecipesController.define_method(:build_parser) { FakeParser.new(parsed) }
+
+    post parse_recipe_url(recipe_no_url), params: { url: "https://example.com/new-recipe" }, as: :json
+    assert_response :success
+
+    recipe_no_url.reload
+    assert_equal "https://example.com/new-recipe", recipe_no_url.reference_url
+  ensure
+    RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
   end
 
   test "parse saves ingredients from parsed URL" do

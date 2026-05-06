@@ -45,11 +45,13 @@ class RecipesController < ApplicationController
   end
 
   def parse
-    url = @recipe.reference_url
+    url = params[:url].presence || @recipe.reference_url
     if url.blank?
-      render json: { error: "No reference URL set for this recipe" }, status: :unprocessable_entity
+      render json: { error: "No reference URL provided" }, status: :unprocessable_entity
       return
     end
+
+    @recipe.update!(reference_url: url) if @recipe.reference_url != url
 
     parser = build_parser
     parsed_ingredients = parser.parse(url)

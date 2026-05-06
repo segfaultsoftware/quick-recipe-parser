@@ -34,12 +34,15 @@ export default class extends Controller {
 
     try {
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+      const recipeUrl = this.hasUrlFieldTarget ? this.urlFieldTarget.value.trim() : ""
       const response = await fetch(this.parseUrlValue, {
         method: "POST",
         headers: {
           "Accept": "application/json",
+          "Content-Type": "application/json",
           "X-CSRF-Token": csrfToken
-        }
+        },
+        body: JSON.stringify({ url: recipeUrl })
       })
 
       const data = await response.json()
