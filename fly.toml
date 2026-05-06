@@ -1,5 +1,11 @@
+# fly.toml app configuration file generated for quick-recipe-parser on 2026-05-05T19:16:54Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
 app = 'quick-recipe-parser'
-primary_region = 'iad'
+primary_region = 'lax'
+console_command = '/rails/bin/rails console'
 
 [build]
 
@@ -22,3 +28,4 @@ primary_region = 'iad'
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 1024
