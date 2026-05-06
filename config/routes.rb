@@ -17,6 +17,7 @@ Rails.application.routes.draw do
   delete "sign_out", to: "sessions#destroy", as: :sign_out
 
   resources :recipes
+  get "ingredients/search", to: "ingredients#search"
 
   # Defines the root path route ("/")
   root "home#index"
