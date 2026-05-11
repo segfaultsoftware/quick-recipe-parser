@@ -59,6 +59,13 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_match "1.5 pound chicken breast", response.body
   end
 
+  test "shows recipe steps on detail page" do
+    get recipe_url(@recipe)
+    assert_response :success
+    assert_match "Preheat oven to 350", response.body
+    assert_match "Season the chicken with salt and pepper", response.body
+  end
+
   test "cannot view another user recipe" do
     get recipe_url(recipes(:two))
     assert_response :not_found
@@ -136,6 +143,27 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "creates recipe with steps" do
+    assert_difference "Recipe.count", 1 do
+      assert_difference "Step.count", 2 do
+        post recipes_url, params: { recipe: {
+          name: "Boiled Eggs",
+          steps_attributes: {
+            "0" => { body: "Bring water to a boil" },
+            "1" => { body: "Add eggs and cook for 10 minutes" }
+          }
+        } }
+      end
+    end
+
+    recipe = Recipe.last
+    assert_redirected_to recipe_url(recipe)
+    assert_equal 2, recipe.steps.count
+    assert_equal "Bring water to a boil", recipe.steps.first.body
+    assert_equal 0, recipe.steps.first.position
+    assert_equal 1, recipe.steps.last.position
+  end
+
   test "fails to create recipe without name" do
     assert_no_difference "Recipe.count" do
       post recipes_url, params: { recipe: { name: "", reference_url: "https://example.com" } }
@@ -170,6 +198,51 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     @recipe.reload
     assert_equal 1, @recipe.recipe_ingredients.count
     assert_equal "garlic", @recipe.recipe_ingredients.first.ingredient.name
+  end
+
+  test "updates recipe with steps replaces all" do
+    patch recipe_url(@recipe), params: { recipe: {
+      name: @recipe.name,
+      steps_attributes: {
+        "0" => { body: "Mix flour and water" },
+        "1" => { body: "Knead the dough" }
+      }
+    } }
+
+    assert_redirected_to recipe_url(@recipe)
+    @recipe.reload
+    assert_equal 2, @recipe.steps.count
+    assert_equal "Mix flour and water", @recipe.steps.first.body
+    assert_equal 0, @recipe.steps.first.position
+  end
+
+  test "skips blank steps on update" do
+    patch recipe_url(@recipe), params: { recipe: {
+      name: @recipe.name,
+      steps_attributes: {
+        "0" => { body: "Valid step" },
+        "1" => { body: "" }
+      }
+    } }
+
+    assert_redirected_to recipe_url(@recipe)
+    @recipe.reload
+    assert_equal 1, @recipe.steps.count
+  end
+
+  test "removes steps marked for destroy" do
+    patch recipe_url(@recipe), params: { recipe: {
+      name: @recipe.name,
+      steps_attributes: {
+        "0" => { body: "Keep this step" },
+        "1" => { body: "Remove this step", _destroy: "1" }
+      }
+    } }
+
+    assert_redirected_to recipe_url(@recipe)
+    @recipe.reload
+    assert_equal 1, @recipe.steps.count
+    assert_equal "Keep this step", @recipe.steps.first.body
   end
 
   test "fails to update recipe with blank name" do

@@ -1,0 +1,15 @@
+<div data-step-row class="flex items-start gap-2">
+  <span data-step-label class="text-sm font-medium text-gray-600 pt-2 whitespace-nowrap">Step <%= index.is_a?(Integer) ? index + 1 : "" %></span>
+
+  <textarea name="recipe[steps_attributes][<%= index %>][body]"
+            placeholder="Describe this step..."
+            rows="2"
+            class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"><%= step&.body %></textarea>
+
+  <input type="hidden" name="recipe[steps_attributes][<%= index %>][_destroy]" value="0" />
+
+  <button type="button" data-action="steps#remove"
+          class="text-red-500 hover:text-red-700 text-sm font-medium px-2 pt-2">
+    &times;
+  </button>
+</div>
