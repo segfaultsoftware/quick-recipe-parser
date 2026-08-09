@@ -1,6 +1,4 @@
 class IngredientsController < ApplicationController
-  before_action :require_login
-
   def search
     query = params[:q].to_s.strip
     if query.length < 2

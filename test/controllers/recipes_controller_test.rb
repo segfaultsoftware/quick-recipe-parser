@@ -2,35 +2,7 @@ require "test_helper"
 
 class RecipesControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @user = users(:one)
     @recipe = recipes(:one)
-
-    OmniAuth.config.test_mode = true
-    OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
-      provider: "google_oauth2",
-      uid: @user.google_uid,
-      info: { email: @user.email, name: @user.name, image: @user.avatar_url }
-    )
-    get "/auth/google_oauth2/callback"
-  end
-
-  teardown do
-    OmniAuth.config.test_mode = false
-    OmniAuth.config.mock_auth[:google_oauth2] = nil
-  end
-
-  # Auth gating tests
-
-  test "redirects unauthenticated user from index" do
-    delete sign_out_path
-    get recipes_url
-    assert_redirected_to root_path
-  end
-
-  test "redirects unauthenticated user from new" do
-    delete sign_out_path
-    get new_recipe_url
-    assert_redirected_to root_path
   end
 
   # Index tests
@@ -135,6 +107,7 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     recipe = Recipe.last
     assert_redirected_to recipe_url(recipe)
     assert_equal "New Recipe", recipe.name
+    assert_equal "Recipe was successfully created.", flash[:notice]
   end
 
   test "creates recipe without reference_url" do
@@ -257,12 +230,6 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Parse tests
-
-  test "parse requires authentication" do
-    delete sign_out_path
-    post parse_recipe_url(@recipe)
-    assert_redirected_to root_path
-  end
 
   test "parse returns error when no url provided and recipe has no reference_url" do
     recipe_no_url = recipes(:no_url)

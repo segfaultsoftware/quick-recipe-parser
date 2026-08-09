@@ -1,11 +1,16 @@
 require "test_helper"
-require_relative "../../db/migrate/20260808120000_remove_user_recipes"
+require_relative "../../db/migrate/20260809120000_remove_users"
 
-class RemoveUserRecipesTest < ActiveSupport::TestCase
-  test "removes ownership join without changing shared recipe data" do
+class RemoveUsersTest < ActiveSupport::TestCase
+  test "removes users without changing shared recipe data" do
     connection = ActiveRecord::Base.connection
     create_users_table(connection)
-    create_user_recipes_table(connection)
+    assert connection.data_source_exists?("users")
+
+    user_model = Class.new(ActiveRecord::Base) do
+      self.table_name = "users"
+    end
+    user_model.create!(name: "Test User")
 
     recipe_snapshot = Recipe.order(:id).pluck(:id, :name, :reference_url)
     ingredient_snapshot = Ingredient.order(:id).pluck(:id, :name)
@@ -17,18 +22,9 @@ class RemoveUserRecipesTest < ActiveSupport::TestCase
       :unit_of_measurement
     )
 
-    ownership_model = Class.new(ActiveRecord::Base) do
-      self.table_name = "user_recipes"
-    end
-    user_model = Class.new(ActiveRecord::Base) do
-      self.table_name = "users"
-    end
-    user = user_model.create!(name: "Test User")
-    ownership_model.create!(user_id: user.id, recipe_id: recipes(:one).id)
+    RemoveUsers.new.migrate(:up)
 
-    RemoveUserRecipes.new.migrate(:up)
-
-    assert_not connection.data_source_exists?("user_recipes")
+    assert_not connection.data_source_exists?("users")
     assert_equal recipe_snapshot, Recipe.order(:id).pluck(:id, :name, :reference_url)
     assert_equal ingredient_snapshot, Ingredient.order(:id).pluck(:id, :name)
     assert_equal recipe_ingredient_snapshot, RecipeIngredient.order(:id).pluck(
@@ -50,16 +46,5 @@ private
       table.string :name
       table.timestamps
     end
-  end
-
-  def create_user_recipes_table(connection)
-    connection.create_table :user_recipes do |table|
-      table.bigint :user_id, null: false
-      table.bigint :recipe_id, null: false
-      table.timestamps
-    end
-
-    connection.add_foreign_key :user_recipes, :users
-    connection.add_foreign_key :user_recipes, :recipes
   end
 end
