@@ -13,6 +13,44 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_match @recipe.name, response.body
     assert_match recipes(:two).name, response.body
     assert_select "a", text: recipes(:no_url).name
+    assert_match "Recipes", response.body
+    assert_no_match(/My Recipes|You haven't added any recipes|your first recipe/i, response.body)
+  end
+
+  test "uses shared collection wording throughout the recipe workflow" do
+    [
+      recipes_url,
+      new_recipe_url,
+      edit_recipe_url(@recipe),
+      recipe_url(@recipe)
+    ].each do |path|
+      get path
+      assert_response :success
+      assert_no_match(/My Recipes|You haven't added any recipes|your first recipe/i, response.body)
+    end
+  end
+
+  test "renders invalid persisted reference URLs as escaped text on index" do
+    invalid_url = %(javascript:alert("<script>"))
+    @recipe.update_column(:reference_url, invalid_url)
+
+    get recipes_url
+
+    assert_response :success
+    assert_includes response.body, ERB::Util.html_escape(invalid_url)
+    assert_no_match(/href="[^"]*javascript:/i, response.body)
+  end
+
+  test "renders persisted reference URLs canonically on index" do
+    @recipe.update_column(:reference_url, "https://example.com/chicken-parm?source=import#ingredients")
+
+    get recipes_url
+
+    assert_response :success
+    assert_select "a[href='https://example.com/chicken-parm'][target='_blank'][rel='noopener noreferrer']" do |links|
+      assert_equal "Reference", links.first.text
+    end
+    assert_no_match(/href="[^"]*source=import/, response.body)
   end
 
   test "renders invalid persisted reference URLs as escaped text on index" do
@@ -108,6 +146,27 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to recipe_url(recipe)
     assert_equal "New Recipe", recipe.name
     assert_equal "Recipe was successfully created.", flash[:notice]
+  end
+
+  test "creates anonymously with CSRF protection and preserves the flash notice" do
+    with_forgery_protection do
+      get new_recipe_url
+      assert_response :success
+
+      csrf_meta_tag = css_select('meta[name="csrf-token"]').first
+      assert csrf_meta_tag
+      csrf_token = csrf_meta_tag["content"]
+
+      post recipes_url,
+        params: { recipe: { name: "CSRF Recipe" } },
+        headers: { "X-CSRF-Token" => csrf_token }
+
+      recipe = Recipe.find_by!(name: "CSRF Recipe")
+      assert_redirected_to recipe_url(recipe)
+
+      follow_redirect!
+      assert_select "p", text: "Recipe was successfully created."
+    end
   end
 
   test "creates recipe without reference_url" do
@@ -263,7 +322,6 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
 
   test "parse rejects invalid url before invoking the parser" do
     recipe_no_url = recipes(:no_url)
-    current_user.recipes << recipe_no_url unless current_user.recipes.include?(recipe_no_url)
     parser = FakeParser.new([])
     RecipesController.define_method(:build_parser) { parser }
 
@@ -340,6 +398,14 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
   end
 
 private
+
+  def with_forgery_protection
+    previous_setting = ApplicationController.allow_forgery_protection
+    ApplicationController.allow_forgery_protection = true
+    yield
+  ensure
+    ApplicationController.allow_forgery_protection = previous_setting
+  end
 
   class FakeParser
     def initialize(result)
