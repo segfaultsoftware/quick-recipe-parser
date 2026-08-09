@@ -1,7 +1,4 @@
 class User < ApplicationRecord
-  has_many :user_recipes, dependent: :destroy
-  has_many :recipes, through: :user_recipes
-
   validates :google_uid, presence: true, uniqueness: true
   validates :email, presence: true, uniqueness: true
 

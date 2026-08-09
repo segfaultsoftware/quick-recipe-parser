@@ -35,11 +35,12 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
 
   # Index tests
 
-  test "shows only current user recipes" do
+  test "shows every recipe in the shared collection" do
     get recipes_url
     assert_response :success
     assert_match @recipe.name, response.body
-    assert_no_match recipes(:two).name, response.body
+    assert_match recipes(:two).name, response.body
+    assert_select "a", text: recipes(:no_url).name
   end
 
   test "renders invalid persisted reference URLs as escaped text on index" do
@@ -114,9 +115,9 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_match "1.5 pound chicken breast", response.body
   end
 
-  test "cannot view another user recipe" do
+  test "shows any recipe in the shared collection" do
     get recipe_url(recipes(:two))
-    assert_response :not_found
+    assert_response :success
   end
 
   # Create tests
@@ -127,14 +128,13 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "creates recipe with valid params" do
-    assert_difference [ "Recipe.count", "UserRecipe.count" ], 1 do
+    assert_difference "Recipe.count", 1 do
       post recipes_url, params: { recipe: { name: "New Recipe", reference_url: "https://example.com/new" } }
     end
 
     recipe = Recipe.last
     assert_redirected_to recipe_url(recipe)
     assert_equal "New Recipe", recipe.name
-    assert_includes @user.recipes, recipe
   end
 
   test "creates recipe without reference_url" do
@@ -232,9 +232,10 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "cannot update another user recipe" do
+  test "updates any recipe in the shared collection" do
     patch recipe_url(recipes(:two)), params: { recipe: { name: "Hacked" } }
-    assert_response :not_found
+    assert_redirected_to recipe_url(recipes(:two))
+    assert_equal "Hacked", recipes(:two).reload.name
   end
 
   # Delete tests
@@ -247,9 +248,12 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to recipes_url
   end
 
-  test "cannot delete another user recipe" do
-    delete recipe_url(recipes(:two))
-    assert_response :not_found
+  test "deletes any recipe in the shared collection" do
+    assert_difference "Recipe.count", -1 do
+      delete recipe_url(recipes(:two))
+    end
+
+    assert_redirected_to recipes_url
   end
 
   # Parse tests
@@ -262,7 +266,6 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
 
   test "parse returns error when no url provided and recipe has no reference_url" do
     recipe_no_url = recipes(:no_url)
-    current_user.recipes << recipe_no_url unless current_user.recipes.include?(recipe_no_url)
 
     post parse_recipe_url(recipe_no_url), as: :json
     assert_response :unprocessable_entity
@@ -273,7 +276,6 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
 
   test "parse uses url from params and saves it to the recipe" do
     recipe_no_url = recipes(:no_url)
-    current_user.recipes << recipe_no_url unless current_user.recipes.include?(recipe_no_url)
 
     parsed = [
       RecipeParsers::Base::ParsedIngredient.new(name: "sugar", quantity: 1.0, unit: "cup")
@@ -371,10 +373,6 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
   end
 
 private
-
-  def current_user
-    @user
-  end
 
   class FakeParser
     def initialize(result)
