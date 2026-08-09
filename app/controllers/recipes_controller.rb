@@ -14,14 +14,16 @@ class RecipesController < ApplicationController
   end
 
   def create
-    @recipe = Recipe.new(recipe_params.except(:recipe_ingredients_attributes))
+    @recipe = Recipe.new(recipe_params.except(:recipe_ingredients_attributes, :steps_attributes))
 
     if @recipe.save
       current_user.recipes << @recipe
       save_recipe_ingredients(@recipe)
+      save_steps(@recipe)
       redirect_to @recipe, notice: "Recipe was successfully created."
     else
       rebuild_recipe_ingredients_from_params(@recipe)
+      rebuild_steps_from_params(@recipe)
       render :new, status: :unprocessable_entity
     end
   end
@@ -30,11 +32,13 @@ class RecipesController < ApplicationController
   end
 
   def update
-    if @recipe.update(recipe_params.except(:recipe_ingredients_attributes))
+    if @recipe.update(recipe_params.except(:recipe_ingredients_attributes, :steps_attributes))
       save_recipe_ingredients(@recipe)
+      save_steps(@recipe)
       redirect_to @recipe, notice: "Recipe was successfully updated."
     else
       rebuild_recipe_ingredients_from_params(@recipe)
+      rebuild_steps_from_params(@recipe)
       render :edit, status: :unprocessable_entity
     end
   end
@@ -75,7 +79,8 @@ private
 
   def recipe_params
     params.expect(recipe: [ :name, :reference_url,
-      recipe_ingredients_attributes: [ [ :ingredient_name, :unit_of_measurement, :number_of_units, :_destroy ] ] ])
+      recipe_ingredients_attributes: [ [ :ingredient_name, :unit_of_measurement, :number_of_units, :_destroy ] ],
+      steps_attributes: [ [ :body, :_destroy ] ] ])
   end
 
   def save_recipe_ingredients(recipe)
@@ -113,6 +118,36 @@ private
         unit_of_measurement: pi.unit,
         number_of_units: pi.quantity
       )
+    end
+  end
+
+  def save_steps(recipe)
+    recipe.steps.destroy_all
+
+    attrs = recipe_params[:steps_attributes]
+    return unless attrs
+
+    position = 0
+    attrs.each_value do |step_attrs|
+      next if step_attrs[:_destroy] == "1"
+      next if step_attrs[:body].blank?
+
+      recipe.steps.create!(body: step_attrs[:body], position: position)
+      position += 1
+    end
+  end
+
+  def rebuild_steps_from_params(recipe)
+    attrs = params.dig(:recipe, :steps_attributes)
+    return unless attrs
+
+    position = 0
+    attrs.each_value do |step_attrs|
+      next if step_attrs[:_destroy] == "1"
+      next if step_attrs[:body].blank?
+
+      recipe.steps.build(body: step_attrs[:body], position: position)
+      position += 1
     end
   end
 

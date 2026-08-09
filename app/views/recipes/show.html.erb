@@ -29,5 +29,14 @@
         <% end %>
       </ul>
     <% end %>
+
+    <% if @recipe.steps.any? %>
+      <h2 class="text-lg font-semibold text-gray-700 mb-2 mt-6">Steps</h2>
+      <ol class="list-decimal list-inside space-y-2 text-gray-700">
+        <% @recipe.steps.each do |step| %>
+          <li><%= step.body %></li>
+        <% end %>
+      </ol>
+    <% end %>
   </div>
 </div>

@@ -51,6 +51,25 @@
     </button>
   </div>
 
+  <div data-controller="steps">
+    <h2 class="text-lg font-semibold text-gray-700 mb-2">Steps</h2>
+
+    <div data-steps-target="container" class="space-y-2">
+      <% recipe.steps.each_with_index do |step, index| %>
+        <%= render "recipes/step_row", index: index, step: step %>
+      <% end %>
+    </div>
+
+    <template data-steps-target="template">
+      <%= render "recipes/step_row", index: "NEW_RECORD", step: nil %>
+    </template>
+
+    <button type="button" data-action="steps#add"
+            class="mt-2 text-sm text-blue-600 hover:text-blue-800 hover:underline">
+      + Add Step
+    </button>
+  </div>
+
   <div data-recipe-parse-target="overlay" class="hidden fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center">
     <div class="bg-white rounded-lg shadow-xl p-8 text-center">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
