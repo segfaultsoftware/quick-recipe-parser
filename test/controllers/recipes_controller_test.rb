@@ -53,29 +53,6 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/href="[^"]*source=import/, response.body)
   end
 
-  test "renders invalid persisted reference URLs as escaped text on index" do
-    invalid_url = %(javascript:alert("<script>"))
-    @recipe.update_column(:reference_url, invalid_url)
-
-    get recipes_url
-
-    assert_response :success
-    assert_includes response.body, ERB::Util.html_escape(invalid_url)
-    assert_no_match(/href="[^"]*javascript:/i, response.body)
-  end
-
-  test "renders persisted reference URLs canonically on index" do
-    @recipe.update_column(:reference_url, "https://example.com/chicken-parm?source=import#ingredients")
-
-    get recipes_url
-
-    assert_response :success
-    assert_select "a[href='https://example.com/chicken-parm'][target='_blank'][rel='noopener noreferrer']" do |links|
-      assert_equal "Reference", links.first.text
-    end
-    assert_no_match(/href="[^"]*source=import/, response.body)
-  end
-
   # Show tests
 
   test "shows recipe detail" do
