@@ -42,6 +42,29 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match recipes(:two).name, response.body
   end
 
+  test "renders invalid persisted reference URLs as escaped text on index" do
+    invalid_url = %(javascript:alert("<script>"))
+    @recipe.update_column(:reference_url, invalid_url)
+
+    get recipes_url
+
+    assert_response :success
+    assert_includes response.body, ERB::Util.html_escape(invalid_url)
+    assert_no_match(/href="[^"]*javascript:/i, response.body)
+  end
+
+  test "renders persisted reference URLs canonically on index" do
+    @recipe.update_column(:reference_url, "https://example.com/chicken-parm?source=import#ingredients")
+
+    get recipes_url
+
+    assert_response :success
+    assert_select "a[href='https://example.com/chicken-parm'][target='_blank'][rel='noopener noreferrer']" do |links|
+      assert_equal "Reference", links.first.text
+    end
+    assert_no_match(/href="[^"]*source=import/, response.body)
+  end
+
   # Show tests
 
   test "shows recipe detail" do
@@ -49,6 +72,38 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match @recipe.name, response.body
     assert_match @recipe.reference_url, response.body
+  end
+
+  test "renders invalid persisted reference URLs as escaped text on show" do
+    invalid_url = %(javascript:alert("<script>"))
+    @recipe.update_column(:reference_url, invalid_url)
+
+    get recipe_url(@recipe)
+
+    assert_response :success
+    assert_includes response.body, ERB::Util.html_escape(invalid_url)
+    assert_no_match(/href="[^"]*javascript:/i, response.body)
+  end
+
+  test "omits blank persisted reference URLs on show" do
+    @recipe.update_column(:reference_url, "")
+
+    get recipe_url(@recipe)
+
+    assert_response :success
+    assert_no_match(/Reference:/, response.body)
+  end
+
+  test "renders persisted reference URLs canonically on show" do
+    @recipe.update_column(:reference_url, "https://example.com/chicken-parm?source=import#ingredients")
+
+    get recipe_url(@recipe)
+
+    assert_response :success
+    assert_select "a[href='https://example.com/chicken-parm'][target='_blank'][rel='noopener noreferrer']" do |links|
+      assert_equal "https://example.com/chicken-parm", links.first.text
+    end
+    assert_no_match(/href="[^"]*source=import/, response.body)
   end
 
   test "shows recipe ingredients on detail page" do
@@ -224,13 +279,32 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
       RecipeParsers::Base::ParsedIngredient.new(name: "sugar", quantity: 1.0, unit: "cup")
     ]
 
-    RecipesController.define_method(:build_parser) { FakeParser.new(parsed) }
+    parser = FakeParser.new(parsed)
+    RecipesController.define_method(:build_parser) { parser }
 
-    post parse_recipe_url(recipe_no_url), params: { url: "https://example.com/new-recipe" }, as: :json
+    post parse_recipe_url(recipe_no_url), params: { url: " HTTPS://Example.COM/new-recipe?source=import#ingredients " }, as: :json
     assert_response :success
 
     recipe_no_url.reload
     assert_equal "https://example.com/new-recipe", recipe_no_url.reference_url
+    assert_equal recipe_no_url.reference_url, parser.url
+  ensure
+    RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
+  end
+
+  test "parse rejects invalid url before invoking the parser" do
+    recipe_no_url = recipes(:no_url)
+    current_user.recipes << recipe_no_url unless current_user.recipes.include?(recipe_no_url)
+    parser = FakeParser.new([])
+    RecipesController.define_method(:build_parser) { parser }
+
+    post parse_recipe_url(recipe_no_url), params: { url: "javascript:alert(1)" }, as: :json
+    assert_response :unprocessable_entity
+
+    data = JSON.parse(response.body)
+    assert_match(/scheme/i, data["error"])
+    assert_nil parser.url
+    assert_nil recipe_no_url.reload.reference_url
   ensure
     RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
   end
@@ -307,7 +381,10 @@ private
       @result = result
     end
 
-    def parse(_url)
+    attr_reader :url
+
+    def parse(url)
+      @url = url
       @result
     end
   end

@@ -11,6 +11,30 @@ class RecipeTest < ActiveSupport::TestCase
     assert recipe.valid?
   end
 
+  test "normalizes reference_url when saving" do
+    recipe = Recipe.new(
+      name: "Normalized Recipe",
+      reference_url: " HTTPS://Example.COM/recipe?source=import#ingredients "
+    )
+
+    assert recipe.save
+    assert_equal "https://example.com/recipe", recipe.reference_url
+  end
+
+  test "rejects invalid reference_url on create and update" do
+    recipe = Recipe.new(name: "Unsafe Recipe", reference_url: "javascript:alert(1)")
+
+    assert_not recipe.save
+    assert_match(/scheme/i, recipe.errors[:reference_url].to_sentence)
+
+    persisted_recipe = recipes(:one)
+    original_url = persisted_recipe.reference_url
+
+    assert_not persisted_recipe.update(reference_url: "https://example.com:8443/recipe")
+    assert_match(/port/i, persisted_recipe.errors[:reference_url].to_sentence)
+    assert_equal original_url, persisted_recipe.reload.reference_url
+  end
+
   test "requires name" do
     recipe = Recipe.new(reference_url: "https://example.com")
     assert_not recipe.valid?
