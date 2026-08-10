@@ -21,8 +21,13 @@
             </td>
             <td class="px-6 py-4 text-sm text-gray-500">
               <% if recipe.reference_url.present? %>
-                <%= link_to "Reference", recipe.reference_url, target: "_blank", rel: "noopener noreferrer",
-                      class: "text-blue-600 hover:underline" %>
+                <% reference_url = recipe_reference_url_for_link(recipe.reference_url) %>
+                <% if reference_url.present? %>
+                  <%= link_to "Reference", reference_url, target: "_blank", rel: "noopener noreferrer",
+                        class: "text-blue-600 hover:underline" %>
+                <% else %>
+                  <%= recipe.reference_url %>
+                <% end %>
               <% end %>
             </td>
           </tr>

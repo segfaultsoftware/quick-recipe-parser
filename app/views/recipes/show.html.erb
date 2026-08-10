@@ -16,8 +16,13 @@
     <% if @recipe.reference_url.present? %>
       <p class="text-sm text-gray-600 mb-4">
         <span class="font-semibold">Reference:</span>
-        <%= link_to @recipe.reference_url, @recipe.reference_url, target: "_blank", rel: "noopener noreferrer",
-              class: "text-blue-600 hover:underline break-all" %>
+        <% reference_url = recipe_reference_url_for_link(@recipe.reference_url) %>
+        <% if reference_url.present? %>
+          <%= link_to reference_url, reference_url, target: "_blank", rel: "noopener noreferrer",
+                class: "text-blue-600 hover:underline break-all" %>
+        <% else %>
+          <%= @recipe.reference_url %>
+        <% end %>
       </p>
     <% end %>
 

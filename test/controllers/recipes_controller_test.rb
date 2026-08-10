@@ -42,6 +42,29 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match recipes(:two).name, response.body
   end
 
+  test "renders invalid persisted reference URLs as escaped text on index" do
+    invalid_url = %(javascript:alert("<script>"))
+    @recipe.update_column(:reference_url, invalid_url)
+
+    get recipes_url
+
+    assert_response :success
+    assert_includes response.body, ERB::Util.html_escape(invalid_url)
+    assert_no_match(/href="[^"]*javascript:/i, response.body)
+  end
+
+  test "renders persisted reference URLs canonically on index" do
+    @recipe.update_column(:reference_url, "https://example.com/chicken-parm?source=import#ingredients")
+
+    get recipes_url
+
+    assert_response :success
+    assert_select "a[href='https://example.com/chicken-parm'][target='_blank'][rel='noopener noreferrer']" do |links|
+      assert_equal "Reference", links.first.text
+    end
+    assert_no_match(/href="[^"]*source=import/, response.body)
+  end
+
   # Show tests
 
   test "shows recipe detail" do
@@ -49,6 +72,38 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match @recipe.name, response.body
     assert_match @recipe.reference_url, response.body
+  end
+
+  test "renders invalid persisted reference URLs as escaped text on show" do
+    invalid_url = %(javascript:alert("<script>"))
+    @recipe.update_column(:reference_url, invalid_url)
+
+    get recipe_url(@recipe)
+
+    assert_response :success
+    assert_includes response.body, ERB::Util.html_escape(invalid_url)
+    assert_no_match(/href="[^"]*javascript:/i, response.body)
+  end
+
+  test "omits blank persisted reference URLs on show" do
+    @recipe.update_column(:reference_url, "")
+
+    get recipe_url(@recipe)
+
+    assert_response :success
+    assert_no_match(/Reference:/, response.body)
+  end
+
+  test "renders persisted reference URLs canonically on show" do
+    @recipe.update_column(:reference_url, "https://example.com/chicken-parm?source=import#ingredients")
+
+    get recipe_url(@recipe)
+
+    assert_response :success
+    assert_select "a[href='https://example.com/chicken-parm'][target='_blank'][rel='noopener noreferrer']" do |links|
+      assert_equal "https://example.com/chicken-parm", links.first.text
+    end
+    assert_no_match(/href="[^"]*source=import/, response.body)
   end
 
   test "shows recipe ingredients on detail page" do
