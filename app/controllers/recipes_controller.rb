@@ -51,7 +51,9 @@ class RecipesController < ApplicationController
       return
     end
 
-    @recipe.update!(reference_url: url) if @recipe.reference_url != url
+    @recipe.assign_attributes(reference_url: url)
+    @recipe.save!
+    url = @recipe.reference_url
 
     parser = build_parser
     parsed_ingredients = parser.parse(url)

@@ -112,6 +112,64 @@ class RecipeParsers::SchemaOrgTest < ActiveSupport::TestCase
     end
   end
 
+  test "normalizes the initial URL before fetching" do
+    html = build_recipe_html([ "1 cup flour" ])
+    fetched_urls = []
+    @parser.define_singleton_method(:fetch_page) do |url|
+      fetched_urls << url
+      html
+    end
+
+    @parser.parse(" HTTPS://Example.COM/recipe?source=import#ingredients ")
+
+    assert_equal [ "https://example.com/recipe" ], fetched_urls
+  end
+
+  test "rejects an invalid initial URL before making an HTTP request" do
+    calls = 0
+
+    response = Net::HTTPInternalServerError.new("1.1", "500", "Server Error")
+    with_http_responses(->(_uri) { calls += 1; response }) do
+      assert_raises(RecipeReferenceUrlPolicy::InvalidUrlError) do
+        @parser.parse("javascript:alert(1)")
+      end
+    end
+
+    assert_equal 0, calls
+  end
+
+  test "normalizes every redirect target before fetching it" do
+    redirect = Net::HTTPFound.new("1.1", "302", "Found")
+    redirect["location"] = " HTTPS://Recipes.Example.COM/next?source=import#ingredients "
+    success = Net::HTTPSuccess.new("1.1", "200", "OK")
+    success.body = build_recipe_html([ "1 cup flour" ])
+    success.instance_variable_set(:@read, true)
+    responses = [ redirect, success ]
+    fetched_urls = []
+
+    with_http_responses(->(uri) { fetched_urls << uri.to_s; responses.shift }) do
+      @parser.parse("https://example.com/recipe?source=import#ingredients")
+    end
+
+    assert_equal [ "https://example.com/recipe", "https://recipes.example.com/next" ], fetched_urls
+  end
+
+  test "rejects an invalid redirect target before fetching it" do
+    redirect = Net::HTTPFound.new("1.1", "302", "Found")
+    redirect["location"] = "javascript:alert(1)"
+    failed_response = Net::HTTPInternalServerError.new("1.1", "500", "Server Error")
+    calls = 0
+
+    responses = [ redirect, failed_response ]
+    with_http_responses(->(_uri) { calls += 1; responses.shift }) do
+      assert_raises(RecipeReferenceUrlPolicy::InvalidUrlError) do
+        @parser.parse("https://example.com/recipe")
+      end
+    end
+
+    assert_equal 1, calls
+  end
+
 private
 
   def build_recipe_html(ingredients)
@@ -131,5 +189,13 @@ private
   def mock_fetch(html, &block)
     @parser.define_singleton_method(:fetch_page) { |_url| html }
     block.call
+  end
+
+  def with_http_responses(response_proc)
+    original_get_response = Net::HTTP.method(:get_response)
+    Net::HTTP.define_singleton_method(:get_response, &response_proc)
+    yield
+  ensure
+    Net::HTTP.define_singleton_method(:get_response, original_get_response) if original_get_response
   end
 end

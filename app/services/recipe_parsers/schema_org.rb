@@ -5,7 +5,7 @@ require "nokogiri"
 module RecipeParsers
   class SchemaOrg < Base
     def parse(url)
-      html = fetch_page(url)
+      html = fetch_page(RecipeReferenceUrlPolicy.normalize(url))
       doc = Nokogiri::HTML(html)
       recipe_data = extract_recipe_json_ld(doc)
 
@@ -18,16 +18,17 @@ module RecipeParsers
   private
 
     def fetch_page(url)
-      uri = URI.parse(url)
+      canonical_url = RecipeReferenceUrlPolicy.normalize(url)
+      uri = URI.parse(canonical_url)
       response = Net::HTTP.get_response(uri)
 
       case response
       when Net::HTTPRedirection
-        fetch_page(response["location"])
+        fetch_page(RecipeReferenceUrlPolicy.normalize(response["location"]))
       when Net::HTTPSuccess
         response.body
       else
-        raise "Failed to fetch #{url}: #{response.code} #{response.message}"
+        raise "Failed to fetch #{canonical_url}: #{response.code} #{response.message}"
       end
     end
 

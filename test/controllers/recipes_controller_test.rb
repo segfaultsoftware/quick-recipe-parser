@@ -224,13 +224,32 @@ class RecipesControllerTest < ActionDispatch::IntegrationTest
       RecipeParsers::Base::ParsedIngredient.new(name: "sugar", quantity: 1.0, unit: "cup")
     ]
 
-    RecipesController.define_method(:build_parser) { FakeParser.new(parsed) }
+    parser = FakeParser.new(parsed)
+    RecipesController.define_method(:build_parser) { parser }
 
-    post parse_recipe_url(recipe_no_url), params: { url: "https://example.com/new-recipe" }, as: :json
+    post parse_recipe_url(recipe_no_url), params: { url: " HTTPS://Example.COM/new-recipe?source=import#ingredients " }, as: :json
     assert_response :success
 
     recipe_no_url.reload
     assert_equal "https://example.com/new-recipe", recipe_no_url.reference_url
+    assert_equal recipe_no_url.reference_url, parser.url
+  ensure
+    RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
+  end
+
+  test "parse rejects invalid url before invoking the parser" do
+    recipe_no_url = recipes(:no_url)
+    current_user.recipes << recipe_no_url unless current_user.recipes.include?(recipe_no_url)
+    parser = FakeParser.new([])
+    RecipesController.define_method(:build_parser) { parser }
+
+    post parse_recipe_url(recipe_no_url), params: { url: "javascript:alert(1)" }, as: :json
+    assert_response :unprocessable_entity
+
+    data = JSON.parse(response.body)
+    assert_match(/scheme/i, data["error"])
+    assert_nil parser.url
+    assert_nil recipe_no_url.reload.reference_url
   ensure
     RecipesController.define_method(:build_parser) { RecipeParsers::SchemaOrg.new }
   end
@@ -307,7 +326,10 @@ private
       @result = result
     end
 
-    def parse(_url)
+    attr_reader :url
+
+    def parse(url)
+      @url = url
       @result
     end
   end
