@@ -41,9 +41,10 @@ class RecipeTest < ActiveSupport::TestCase
     assert_includes recipe.errors[:name], "can't be blank"
   end
 
-  test "has many users through user_recipes" do
+  test "does not have user ownership associations" do
     recipe = recipes(:one)
-    assert_includes recipe.users, users(:one)
+    assert_not_respond_to recipe, :user_recipes
+    assert_not_respond_to recipe, :users
   end
 
   test "has many ingredients through recipe_ingredients" do

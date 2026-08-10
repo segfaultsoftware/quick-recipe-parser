@@ -1,9 +1,8 @@
 class RecipesController < ApplicationController
-  before_action :require_login
   before_action :set_recipe, only: %i[show edit update destroy parse]
 
   def index
-    @recipes = current_user.recipes.order(:name)
+    @recipes = Recipe.order(:name)
   end
 
   def show
@@ -17,7 +16,6 @@ class RecipesController < ApplicationController
     @recipe = Recipe.new(recipe_params.except(:recipe_ingredients_attributes))
 
     if @recipe.save
-      current_user.recipes << @recipe
       save_recipe_ingredients(@recipe)
       redirect_to @recipe, notice: "Recipe was successfully created."
     else
@@ -72,7 +70,7 @@ class RecipesController < ApplicationController
 private
 
   def set_recipe
-    @recipe = current_user.recipes.find(params[:id])
+    @recipe = Recipe.find(params[:id])
   end
 
   def recipe_params
